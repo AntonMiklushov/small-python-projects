@@ -60,32 +60,42 @@ class QSystem:
 
     # applies given gate to the given qubit
     def apply(self, gate, *n):
-        def calculate_and_apply_operator(g, n, p):
-            """
-            :param p: number of qubits the gate takes
-            """
-            O = reduce(np.kron, [I] * n[0] + [g] + [I] * (self.size - n[-1] - p + 1))
+        if len(n) > len(set(n)):
+            raise ArithmeticError("input indices can't be equal")
+
+        def calculate_and_apply_operator(g, n):
+            O = reduce(np.kron, [I] * n[0] + [g] + [I] * (self.size - n[-1] - 1))
             self.state = np.dot(O, self.state)
 
         def swap(n0, n1):
             for i in range(min(n0, n1), max(n0, n1) - 1):
-                calculate_and_apply_operator(SWAP, (i, i + 1), 2)
+                calculate_and_apply_operator(SWAP, (i, i + 1))
+            for i in range(min(n0, n1) + 1, max(n0, n1) - 1)[::-1]:
+                calculate_and_apply_operator(SWAP, (i - 1, i))
 
         match len(n):
             case 1:
-                O = reduce(np.kron, [I] * n[0] + [gate] + [I] * (self.size - n[0] - 1))
-                self.state = np.dot(O, self.state)
+                calculate_and_apply_operator(gate, (n[0],))
             case 2:
                 if abs(n[0] - n[1]) > 1:
                     swap(n[0], n[1] - 1)
-                    calculate_and_apply_operator(gate, (n[1] - 1, n[1]), 2)
+                    calculate_and_apply_operator(gate, (n[1] - 1, n[1]))
                     swap(n[0], n[1] - 1)
                     return
                 calculate_and_apply_operator(gate, n, 2)
             case 3:
-                if abs(n[0] - n[1] == 1) and abs(n[1] - n[2] == 1):
-                    calculate_and_apply_operator(gate, n, 3)
+                if abs(n[0] - n[1]) == 1 and abs(n[1] - n[2]) == 1:
+                    calculate_and_apply_operator(gate, n)
                     return
+                if abs(n[1] - n[2]) > 1:
+                    swap(n[1], n[2] - 1)
+                if abs(n[0] - n[2] > 2):
+                    swap(n[0], n[2] - 2)
+                calculate_and_apply_operator(gate, (n[2] - 2, n[2] - 1, n[2]))
+                if abs(n[0] - n[2] > 2):
+                    swap(n[0], n[2] - 2)
+                if abs(n[1] - n[2]) > 1:
+                    swap(n[1], n[2] - 1)
 
     def measure(self):
         probabilities = np.abs(self.state) ** 2
