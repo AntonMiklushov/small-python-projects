@@ -18,7 +18,7 @@ def load_mnist_labels(filename):
         labels = np.frombuffer(f.read(), dtype=np.uint8)
         return labels
 
-LEARNING = True
+LEARNING = False
 SAVE = r'C:\Users\Anton\Desktop\ai_python\state.txt'
 
 def main():
